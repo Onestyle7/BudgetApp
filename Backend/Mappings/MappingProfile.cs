@@ -19,6 +19,7 @@ public class MappingProfile : Profile
             // Możemy dodać inne mapowania, jeśli będą potrzebne
             .ForMember(dest => dest.RegistrationDate, opt => opt.MapFrom(src => DateTime.UtcNow)); // Ustawiamy datę rejestracji na aktualną datę
         CreateMap<LoginDto, LoginData>(); // Mapujemy LoginDto na LoginData
+        CreateMap<CreateTransactionDto, Transactions>(); // Mapujemy CreateTransactionDto na Transactions
     }
 
     // Metoda do hashowania haseł (z użyciem BCrypt)
