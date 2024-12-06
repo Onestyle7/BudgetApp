@@ -24,6 +24,7 @@ namespace Backend.Services
             _context = context;
         }
         public string GenerateJwtToken(Users user){
+            // Podstawowe informacje o użytkowniku (ID, email, name)
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -31,10 +32,10 @@ namespace Backend.Services
                 new Claim(ClaimTypes.Name, user.FirstName + " " + user.LastName),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
-
+            // Klucz podpisujący i algorytm
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
+             // Tworzenie tokenu JWT
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Issuer,
                 audience: _jwtSettings.Audience,
@@ -43,45 +44,49 @@ namespace Backend.Services
                 signingCredentials: creds
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return new JwtSecurityTokenHandler().WriteToken(token); // Zwrócenie tokenu jako string
         }
-
+        // Logowanie użytkownika na podstawie emaila i hasła
         public async Task<Users> LoginUserAsync(LoginDto loginDto)
         {
+            // Znalezienie użytkownika na podstawie emaila
             var user = await _context.Users
                 .Include(u => u.LoginData)
                 .FirstOrDefaultAsync(u => u.LoginData.Email == loginDto.Email);
 
-            if (user == null) return null; 
+            if (user == null) throw new Exception("User doesn't exist"); // Użytkownik nie istnieje
 
+            // Weryfikacja hasła (BCrypt)
             if(!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.LoginData.Password))
-                return null;
-
+                throw new Exception("Invalid credentials"); // Błędne hasło
+            // Zwrócenie użytkownika, jeśli wszystko jest poprawne
             return user;
         }
-
+        // Rejestracja nowego użytkownika
         public async Task<bool> RegisterUserAsync(RegisterDto registerDto)
         {
+            // Sprawdzenie, czy użytkownik z podanym emailem już istnieje
             var existingUser = await _context.Users
                 .Include(u => u.LoginData)
                 .FirstOrDefaultAsync(u => u.LoginData.Email == registerDto.Email);
 
             if(existingUser != null){
-                return false;
+                return false; // Email już zajęty
             }
+            // Tworzenie nowego użytkownika
             var user = new Users{
                 FirstName = registerDto.FirstName,
                 LastName = registerDto.LastName,
                 LoginData = new LoginData{
                     Email = registerDto.Email,
-                    Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password)
+                    Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password) // Haszowanie hasła
                 }
             };
-
+            // Dodanie użytkownika do bazy danych
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return true;
+            return true; // Rejestracja zakończona sukcesem
         }
     }
 }

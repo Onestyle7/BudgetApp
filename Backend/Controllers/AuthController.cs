@@ -41,5 +41,6 @@ namespace Backend.Controllers
 
             return Ok("User registered successfully");
         }
+        
     }
 }
