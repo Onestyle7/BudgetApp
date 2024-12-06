@@ -18,7 +18,7 @@ namespace Backend.Models
         public DateTime Date { get; set; }
         [Required]
         public Category Category { get; set; }
-        public int userId { get; set; }
+        public int UserId { get; set; }
         public Users User { get; set; }
     }
 }
