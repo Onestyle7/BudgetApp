@@ -19,7 +19,13 @@ public class MappingProfile : Profile
             // Możemy dodać inne mapowania, jeśli będą potrzebne
             .ForMember(dest => dest.RegistrationDate, opt => opt.MapFrom(src => DateTime.UtcNow)); // Ustawiamy datę rejestracji na aktualną datę
         CreateMap<LoginDto, LoginData>(); // Mapujemy LoginDto na LoginData
-        CreateMap<CreateTransactionDto, Transactions>(); // Mapujemy CreateTransactionDto na Transactions
+        CreateMap<CreateTransactionDto, Transactions>() // Mapujemy CreateTransactionDto na Transactions
+        .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category.ToString())); // Konwertuje pole Category z enum na string podczas mapowania
+
+        CreateMap<Transactions, TransactionDto>() // Mapowanie Transactions na TransactionDto
+        .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category.ToString())) // Konwertuje pole Category z enum na string podczas mapowania
+        .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => $"{src.User.FirstName} {src.User.LastName}")); //Łączy imię i nazwisko użytkownika w jedno pole UserName
+
     }
 
     // Metoda do hashowania haseł (z użyciem BCrypt)
