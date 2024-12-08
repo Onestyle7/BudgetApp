@@ -17,7 +17,7 @@ namespace Backend.DTOs
     public DateTime Date { get; set; } // Data transakcji
 
     [Required] // Pole jest wymagane
-    public Category category { get; set; } // Kategoria transakcji (np. jedzenie, transport)
+    public Category Category { get; set; } // Kategoria transakcji (np. jedzenie, transport)
 }
 
 }
