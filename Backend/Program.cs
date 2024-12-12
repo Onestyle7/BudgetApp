@@ -72,7 +72,7 @@ builder.Services.AddCors(options =>{
 builder.Services.AddScoped<IUserService, UserService>();
 // Rejestracja serwisu dla obsługi transakcji w kontenerze DI
 builder.Services.AddScoped<ITransactionService, TransactionService>();
-
+builder.Services.AddScoped<ISavingGoalsService, SavingGoalsService>();
 // Rejestracja AutoMappera, aby mógł automatycznie mapować DTO na modele i odwrotnie
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
