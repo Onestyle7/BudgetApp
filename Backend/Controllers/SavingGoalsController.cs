@@ -62,16 +62,22 @@ namespace Backend.Controllers
         /// Zwraca pojedynczy cel oszczędnościowy na podstawie ID i userId.
         /// Wymaga autoryzacji.
         [Authorize]
-        [HttpGet("{id}")]
-        public async Task<SavingGoals?> GetSavingGoalByIdAsync(int id, [FromQuery] int userId)
+        [HttpGet("all")]
+        public async Task<ActionResult<SavingGoals?>> GetSavingGoalByIdAsync()
         {
-            var savingGoal = await _savingGoalsService.GetSavingGoalByIdAsync(id, userId);
-            return savingGoal;
-        }
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if(userIdClaim == null){
+                return Unauthorized("Brak ważnego userId w claimach");
+            }
 
-        /// Dodaje nowy cel oszczędnościowy dla użytkownika.
-        /// Zakładamy, że obiekt SavingGoals zawiera w sobie userId lub zostanie on przekazany wraz z żądaniem.
-        /// Wymaga autoryzacji.
+            if(!int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized("Nie można przetworzyć userId z claimów.");
+            }
+            // Wywołanie serwisu, aby pobrać wszystkie cele oszczędnościowe dla tego userId
+            var savingGoals = await _savingGoalsService.GetAllSavingGoalsAsync(userId);
+            return Ok(savingGoals);
+        }
         
 
         /// Aktualizuje istniejący cel oszczędnościowy na podstawie ID i userId.
@@ -91,6 +97,7 @@ namespace Backend.Controllers
         public async Task DeleteSavingGoalAsync(int id, [FromQuery] int userId)
         {
             await _savingGoalsService.DeleteSavingGoalAsync(id, userId);
+
         }
         
         /// Zwraca postęp (w procentach) realizacji celu oszczędnościowego.
