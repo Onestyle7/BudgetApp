@@ -59,11 +59,11 @@ namespace Backend.Controllers
         }
     
 
-        /// Zwraca pojedynczy cel oszczędnościowy na podstawie ID i userId.
+        /// Zwraca wszystkie cele oszczędnościowe zalogowanego użytkownika.
         /// Wymaga autoryzacji.
         [Authorize]
         [HttpGet("all")]
-        public async Task<ActionResult<SavingGoals?>> GetSavingGoalByIdAsync()
+        public async Task<ActionResult<IEnumerable<SavingGoals?>>> GetAllSavingGoalByIdAsync()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if(userIdClaim == null){
@@ -84,20 +84,59 @@ namespace Backend.Controllers
         /// Wymaga autoryzacji.
         [Authorize]
         [HttpPut("{id}")]
-        public async Task<SavingGoals> UpdateSavingGoalAsync(int id, [FromBody] SavingGoals savingGoal, [FromQuery] int userId)
+        public async Task<ActionResult<SavingGoals>> UpdateSavingGoalAsync(int id, AddSavingGoalDto dto)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+            {
+                return Unauthorized("Brak ważnego userId w claimach.");
+            }
+
+            if (!int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized("Nie można przetworzyć userId z claimów.");
+            }
+
+            var savingGoal = new SavingGoals
+            {
+                Name = dto.Name,
+                GoalAmount = dto.GoalAmount,
+                CurrentAmount = dto.CurrentAmount,
+                TargetDate = dto.TargetDate,
+                Date = DateTime.Now,
+                userId = userId
+            };
+
             var updatedSavingGoal = await _savingGoalsService.UpdateSavingGoalAsync(id, savingGoal, userId);
-            return updatedSavingGoal;
+            if (updatedSavingGoal == null)
+            {
+                return NotFound("Nie znaleziono celu do aktualizacji.");
+            }
+            return Ok(updatedSavingGoal);
         }
+
 
         /// Usuwa cel oszczędnościowy na podstawie ID i userId.
         /// Wymaga autoryzacji.
         [Authorize]
         [HttpDelete("{id}")]
-        public async Task DeleteSavingGoalAsync(int id, [FromQuery] int userId)
+        public async Task<ActionResult> DeleteSavingGoalAsync(int id)
         {
-            await _savingGoalsService.DeleteSavingGoalAsync(id, userId);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if(userIdClaim == null)
+            {
+                return Unauthorized("Brak ważnego userId w claimach");
+            }    
 
+            if(!int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized("Nie można przetworzyć userId z claimów.");
+            }
+
+            // Wywołanie serwisu w celu usunięcia celu oszczeędnościowego
+            await _savingGoalsService.DeleteSavingGoalAsync(id, userId);
+            
+            return NoContent(); //Zwraca 204 no Content w przypadku sukcesu
         }
         
         /// Zwraca postęp (w procentach) realizacji celu oszczędnościowego.
@@ -106,10 +145,27 @@ namespace Backend.Controllers
         
         [Authorize]
         [HttpGet("progress/{id}")]
-        public async Task<double?> GetProgressAsync(int id, [FromQuery] int userId)
+        public async Task<ActionResult<double?>> GetProgressAsync(int id)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if(userIdClaim == null)
+            {
+                return Unauthorized("Brak ważnego userId w claimach");
+            }
+
+            if(!int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized("Nie można przetworzyć userId z claimów.");
+            }
+
+            //Pobranie postępu realizacji celu 
             var progress = await _savingGoalsService.GetProgressAsync(id, userId);
-            return progress;
+            if(progress == null)
+            {
+                return NotFound("Nie znaleziono celu.");
+            }
+
+            return Ok(progress);
         }
 
     }
