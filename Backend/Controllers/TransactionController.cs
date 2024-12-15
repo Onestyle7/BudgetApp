@@ -39,10 +39,52 @@ namespace Backend.Controllers
             return Ok(transaction); // Zwraca 200 z transakcją w treści odpowiedzi
         }
         [HttpGet("all")] // Trasa: GET api/Transaction/all
-        public async Task<ActionResult<IEnumerable<Transactions>>> GetAllTransactionsAsync()
+        public async Task<ActionResult<IEnumerable<TransactionDto>>> GetAllTransactionsAsync(
+            [FromQuery] string sortBy = "date",
+            [FromQuery] bool descending = false,
+            [FromQuery] string? category = null,
+            [FromQuery] decimal? minAmount = null,
+            [FromQuery] decimal? maxAmount = null,
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null         
+             )
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"); // Pobranie ID zalogowanego użytkownika
             var transactions = await _transactionService.GetAllTransactionsAsync(userId); // Pobranie wszystkich transakcji
+
+            // Filtrowanie po kategorii jeśli jest podana
+            if(!string.IsNullOrEmpty(category)){
+                transactions = transactions.Where(t => string.Equals(t.Category.ToString(), category, StringComparison.OrdinalIgnoreCase));
+            }
+            // Filtrowanie po minAmount i maxAmount, jeśli są podane
+            if(minAmount.HasValue){
+                transactions = transactions.Where(t => t.Amount >= minAmount);   
+            }
+
+            if(maxAmount.HasValue){
+                transactions = transactions.Where(t => t.Amount <= maxAmount);
+            } 
+
+            // Filtrowanie po dacie 
+            if(startDate.HasValue){
+                transactions = transactions.Where(t => t.Date >= startDate);
+            }
+
+            if(endDate.HasValue){
+                transactions = transactions.Where(t => t.Date <= endDate);
+            }
+
+            //Sortowanie wg parametry sortBy
+
+            transactions = sortBy.ToLower() switch{
+                "category" => descending ? transactions.OrderByDescending(t => t.Category) : transactions.OrderBy(t => t.Category),
+                "amount" => descending ? transactions.OrderByDescending(t => t.Amount) : transactions.OrderBy(t => t.Amount),
+
+                //Domyślnie sortujemy po dacie
+
+                _ => descending ? transactions.OrderByDescending(t => t.Date) : transactions.OrderBy(t => t.Date)
+            };
+
             var transactionDtos = _mapper.Map<IEnumerable<TransactionDto>>(transactions); // Mapowanie modelu Transactions na DTO
             return Ok(transactionDtos); 
         }
