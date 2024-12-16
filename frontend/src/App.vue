@@ -1,26 +1,31 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <!-- Główny szablon aplikacji -->
+  <img alt="Vue logo" src="./assets/logo.png" />
+  <!-- Wyświetlenie logo Vue -->
+  <LoginView />
+  <!-- Osadzenie komponentu logowania -->
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+// Importowanie komponentu LoginView
+import LoginView from "./views/LoginView.vue";
 
 export default {
-  name: 'App',
+  name: "App", // Nazwa komponentu głównego aplikacji
   components: {
-    HelloWorld
-  }
-}
+    LoginView, // Rejestracja komponentu do użycia w szablonie
+  },
+};
 </script>
 
 <style>
+/* Globalne style dla aplikacji */
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+  font-family: Avenir, Helvetica, Arial, sans-serif; /* Główna czcionka */
+  -webkit-font-smoothing: antialiased; /* Wygładzanie tekstu dla przeglądarek Webkit */
+  -moz-osx-font-smoothing: grayscale; /* Wygładzanie tekstu dla macOS */
+  text-align: center; /* Wyśrodkowanie tekstu */
+  color: #2c3e50; /* Główny kolor tekstu */
+  margin-top: 60px; /* Odstęp od góry strony */
 }
 </style>
