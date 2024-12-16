@@ -1,34 +1,45 @@
-// Importowanie funkcji do tworzenia routera Vue
 import { createRouter, createWebHistory } from "vue-router";
-// Importowanie widoków stron
+
+// Import widoków
 import DashboardView from "@/views/DashboardView.vue";
 import LoginView from "@/views/LoginView.vue";
+import RegisterView from "@/views/RegisterView.vue";
 
-// Definicja tras dla aplikacji
 const routes = [
   {
-    path: "/", // Ścieżka dla strony głównej (Dashboard)
-    name: "Dashboard", // Nazwa trasy
-    component: DashboardView, // Powiązany komponent widoku
+    path: "/",
+    redirect: "/login", // Domyślnie przekierowanie na logowanie
   },
   {
-    path: "/login", // Ścieżka dla strony logowania
+    path: "/dashboard",
+    name: "Dashboard",
+    component: DashboardView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/login",
     name: "Login",
     component: LoginView,
   },
   {
-    path: "/register", // Ścieżka dla strony rejestracji
+    path: "/register",
     name: "Register",
-    // Lazy loading: komponent zostanie załadowany tylko po wejściu na tę trasę
-    component: () => import("@/views/RegisterView.vue"),
+    component: RegisterView,
   },
 ];
 
-// Tworzenie routera z użyciem historii nawigacji (HTML5 history mode)
 const router = createRouter({
   history: createWebHistory(),
-  routes, // Przekazanie zdefiniowanych tras
+  routes,
 });
 
-// Eksport routera do użycia w aplikacji
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem("token");
+  if (to.meta.requiresAuth && !token) {
+    next("/login");
+  } else {
+    next();
+  }
+});
+
 export default router;
