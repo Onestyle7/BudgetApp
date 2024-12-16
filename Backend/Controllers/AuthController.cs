@@ -36,10 +36,10 @@ namespace Backend.Controllers
 
             if (!result)
             {
-                return BadRequest("Email already in use");
+                return BadRequest(new {message = "Email already in use"});
             }
 
-            return Ok("User registered successfully");
+            return Ok(new{message = "User registered successfully"});
         }
         
     }
