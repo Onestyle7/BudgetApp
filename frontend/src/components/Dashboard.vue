@@ -8,7 +8,7 @@
 
 <script>
 export default {
-  name: "DashboardView",
+  name: "Dashboard",
   methods: {
     handleLogout() {
       // Usunięcie tokena z localStorage
