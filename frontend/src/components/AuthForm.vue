@@ -87,14 +87,12 @@
 </template>
 
 <script>
-import { ref } from "vue"; // Importowanie ref z Composition API
-import { useRouter } from "vue-router"; // Importowanie routera
-
-const BASE_URL = "http://localhost:5050/api/auth";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
 
 export default {
   setup() {
-    const router = useRouter(); // Pobranie instancji routera
+    const router = useRouter();
 
     const isLogin = ref(true); // Przełączanie formularza
     const loginData = ref({ email: "", password: "" });
@@ -105,6 +103,8 @@ export default {
       password: "",
     });
 
+    const BASE_URL = "http://localhost:5050/api/auth";
+
     // Obsługa logowania
     const handleLogin = async () => {
       try {
@@ -114,19 +114,13 @@ export default {
           body: JSON.stringify(loginData.value),
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          alert(`Błąd logowania: ${errorData.message || "Nieprawidłowe dane"}`);
-          return;
-        }
+        if (!response.ok) throw new Error("Błąd logowania");
 
         const data = await response.json();
         localStorage.setItem("token", data.token);
-        alert("Zalogowano pomyślnie!");
         router.push("/dashboard");
       } catch (error) {
         console.error("Błąd logowania:", error);
-        alert("Wystąpił błąd podczas logowania.");
       }
     };
 
@@ -139,17 +133,12 @@ export default {
           body: JSON.stringify(registerData.value),
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          alert(`Błąd rejestracji: ${errorData.message || "Spróbuj ponownie"}`);
-          return;
-        }
+        if (!response.ok) throw new Error("Błąd rejestracji");
 
         alert("Rejestracja zakończona sukcesem!");
-        isLogin.value = true; // Przełączenie na logowanie
+        isLogin.value = true;
       } catch (error) {
         console.error("Błąd rejestracji:", error);
-        alert("Wystąpił błąd podczas rejestracji.");
       }
     };
 
@@ -160,7 +149,7 @@ export default {
     return {
       isLogin,
       loginData,
-      registerData,
+      registerData, // Dodaj registerData
       handleLogin,
       handleRegister,
       toggleForm,
