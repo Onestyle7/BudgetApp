@@ -63,11 +63,11 @@ c.AddSecurityRequirement(new OpenApiSecurityRequirement
     }
 });
 });
-builder.Services.AddCors(options =>{
-    options.AddPolicy("AllowFrontend",
-    policy => policy.WithOrigins("http://localhost:8080")
-    .AllowAnyMethod()
-    .AllowAnyHeader());
+builder.Services.AddCors(options => {
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins("http://localhost:8080") // Adres Twojego frontendu
+        .AllowAnyMethod()
+        .AllowAnyHeader());
 });
 builder.Services.AddScoped<IUserService, UserService>();
 // Rejestracja serwisu dla obsługi transakcji w kontenerze DI
