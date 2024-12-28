@@ -65,7 +65,7 @@ c.AddSecurityRequirement(new OpenApiSecurityRequirement
 });
 builder.Services.AddCors(options => {
     options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins("http://localhost:8080") // Adres Twojego frontendu
+        policy.WithOrigins("http://localhost:3000") // Adres Twojego frontendu
         .AllowAnyMethod()
         .AllowAnyHeader());
 });
