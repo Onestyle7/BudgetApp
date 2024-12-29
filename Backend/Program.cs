@@ -17,7 +17,14 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
-builder.Services.AddSingleton(jwtSettings);
+if (jwtSettings != null)
+{
+    builder.Services.AddSingleton(jwtSettings);
+}
+else
+{
+    throw new InvalidOperationException("JWT settings are not configured properly.");
+}
 
 builder.Services.AddAuthentication(options =>{
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -64,11 +71,12 @@ c.AddSecurityRequirement(new OpenApiSecurityRequirement
 });
 });
 builder.Services.AddCors(options => {
-    options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins("http://localhost:3000") // Adres Twojego frontendu
+    options.AddPolicy("AllowAll", policy =>
+        policy.WithOrigins("http://localhost:3000")
         .AllowAnyMethod()
-        .AllowAnyHeader());
-});
+        .AllowAnyHeader()
+        .AllowCredentials()); // Obsługuje tokeny lub dane uwierzytelniające
+    });
 builder.Services.AddScoped<IUserService, UserService>();
 // Rejestracja serwisu dla obsługi transakcji w kontenerze DI
 builder.Services.AddScoped<ITransactionService, TransactionService>();
@@ -89,7 +97,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
+app.UseCors("AllowAll");
 app.MapControllers();
 app.Run();
 
