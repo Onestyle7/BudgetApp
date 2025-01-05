@@ -12,17 +12,25 @@ import { Card } from "@/components/ui/card";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import axios from "axios";
 
+// Zakładam, że Twój backend jest na http://localhost:5050
 axios.defaults.baseURL = "http://localhost:5050";
 
-// Definicja typu Transaction
+// Definicja typu Transaction (opcjonalnie, jeśli używasz TypeScript)
 type Transaction = {
   id: number;
   name: string;
   amount: number;
-  category: { id: number; name: string; color: string };
+  date: string;
+  // category po zmapowaniu to będzie obiekt z frontu
+  category: {
+    id: number;
+    name: string;
+    color: string;
+  };
+  userName?: string;
 };
 
-// Kategorie transakcji
+// Kategorie
 const categories = [
   { id: 1, name: "Subscriptions", color: "#FF6384" },
   { id: 2, name: "Groceries", color: "#36A2EB" },
@@ -36,31 +44,54 @@ const categories = [
 
 const Dashboard = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [name, setName] = useState<string>("");
-  const [amount, setAmount] = useState<string>("");
-  const [category, setCategory] = useState<string>("1");
+  const [loading, setLoading] = useState(false);
 
+  // Formularz
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("1");
+
+  // -------------------
+  // 1. Pobieranie transakcji
+  // -------------------
   const fetchTransactions = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
+
       const response = await axios.get("/api/Transaction/all", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      const mappedTransactions = response.data.map((t) => ({
-        ...t,
-        category: categories.find((c) => c.id === t.category) || {
-          id: 0,
-          name: "Nieznana",
-          color: "#000000",
-        },
-      }));
+      // API zwraca np.
+      // [
+      //   {
+      //     "id": 17,
+      //     "amount": 29,
+      //     "date": "2025-01-05T17:25:54.227",
+      //     "category": "Subscriptions",
+      //     "userName": "TestName testSurname",
+      //     "name": "Netflix"
+      //   },
+      //   ...
+      // ]
 
-      setTransactions(mappedTransactions);
+      const mapped = response.data.map((t: any) => {
+        // Szukamy kategorii po polu `name`:
+        const foundCat = categories.find((c) => c.name === t.category);
+
+        return {
+          ...t,
+          // Nadpisujemy field `category` obiektem z frontu
+          category: foundCat || {
+            id: 0,
+            name: "Nieznana",
+            color: "#000000",
+          },
+        };
+      });
+
+      setTransactions(mapped);
     } catch (error) {
       console.error("Błąd podczas ładowania danych:", error);
       alert("Nie udało się pobrać danych z serwera!");
@@ -69,6 +100,9 @@ const Dashboard = () => {
     }
   };
 
+  // -------------------
+  // 2. Dodawanie transakcji
+  // -------------------
   const addTransaction = async () => {
     if (!name.trim()) {
       alert("Nazwa transakcji nie może być pusta!");
@@ -79,49 +113,40 @@ const Dashboard = () => {
       return;
     }
 
-    const categoryObj = categories.find((c) => c.id === parseInt(category));
-    if (!categoryObj) {
-      alert("Nieprawidłowa kategoria");
+    const catObj = categories.find((c) => c.id === parseInt(category));
+    if (!catObj) {
+      alert("Nieprawidłowa kategoria!");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Brak tokena. Zaloguj się ponownie.");
       return;
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Brak tokena. Zaloguj się ponownie.");
-        return;
-      }
-
+      // Wysyłamy do backendu w formacie, który on obsługuje
+      // (Skoro zwraca "category": "Subscriptions", to zapewne
+      //  oczekuje też stringa np. "Subscriptions" ?)
+      // Jeżeli jednak oczekuje integera (enuma), to musisz zmienić
+      //  tu na catObj.id. Zależnie od tego, jak jest w kodzie .NET.
       const newTransaction = {
         name,
         amount: parseFloat(amount),
-        category: categoryObj.id,
-        date: new Date().toISOString(), // Przesyłanie aktualnej daty
+        date: new Date().toISOString(),
+        // Jeśli Twój .NET przyjmuje "Subscriptions", "Rent" itp.:
+        category: catObj.name,
       };
 
-      try {
-        const response = await axios.post(
-          "/api/Transaction/add",
-          newTransaction,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        console.log("Sukces:", response.data);
-      } catch (error) {
-        if (axios.isAxiosError(error)) {
-          console.error(
-            "Błąd API:",
-            error.response?.status,
-            error.response?.data
-          );
-        } else {
-          console.error("Inny błąd:", error);
-        }
-      }
+      await axios.post("/api/Transaction/add", newTransaction, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Odświeżamy listę
       fetchTransactions();
+
+      // Reset
       setName("");
       setAmount("");
       setCategory("1");
@@ -131,24 +156,28 @@ const Dashboard = () => {
     }
   };
 
+  // -------------------
+  // 3. useEffect
+  // -------------------
   useEffect(() => {
     fetchTransactions();
   }, []);
 
+  // -------------------
+  // 4. Wykres
+  // -------------------
   const data = useMemo(() => {
     return categories.map((cat) => {
       const total = transactions
-        .filter(
-          (t) =>
-            typeof t.category === "number"
-              ? t.category === cat.id // Obsługa liczby
-              : t.category.id === cat.id // Obsługa obiektu
-        )
+        .filter((t) => t.category?.name === cat.name)
         .reduce((sum, t) => sum + t.amount, 0);
       return { name: cat.name, value: total, color: cat.color };
     });
   }, [transactions]);
 
+  // -------------------
+  // 5. Render
+  // -------------------
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
@@ -157,7 +186,7 @@ const Dashboard = () => {
         <h2 className="text-xl font-semibold mb-4">Dodaj transakcję</h2>
         <div className="flex gap-4 mb-4">
           <Input
-            placeholder="Nazwa"
+            placeholder="Nazwa transakcji"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -167,10 +196,7 @@ const Dashboard = () => {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-          <Select
-            value={category}
-            onValueChange={(value) => setCategory(value)}
-          >
+          <Select value={category} onValueChange={(val) => setCategory(val)}>
             <SelectTrigger>
               <SelectValue placeholder="Wybierz kategorię" />
             </SelectTrigger>
@@ -221,13 +247,11 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td className="border px-4 py-2">{transaction.name}</td>
-                  <td className="border px-4 py-2">{transaction.amount} zł</td>
-                  <td className="border px-4 py-2">
-                    {transaction.category?.name ?? "Brak"}
-                  </td>
+              {transactions.map((tx) => (
+                <tr key={tx.id}>
+                  <td className="border px-4 py-2">{tx.name}</td>
+                  <td className="border px-4 py-2">{tx.amount} zł</td>
+                  <td className="border px-4 py-2">{tx.category.name}</td>
                 </tr>
               ))}
             </tbody>
