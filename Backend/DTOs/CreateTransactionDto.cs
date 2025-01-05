@@ -12,6 +12,8 @@ namespace Backend.DTOs
         [Required] // Pole jest wymagane
         [Range(0.01, Double.MaxValue)] // Wartość musi być większa niż 0.01
         public decimal Amount { get; set; } // Kwota transakcji
+        [Required] // Pole jest wymagane
+        public string Name { get; set; } // Nazwa transakcji
 
         [Required] // Pole jest wymagane
         public DateTime Date { get; set; } // Data transakcji

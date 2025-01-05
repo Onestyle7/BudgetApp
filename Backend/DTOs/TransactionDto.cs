@@ -12,6 +12,7 @@ namespace Backend.DTOs
         public DateTime Date { get; set; }
         public required string Category { get; set; } // String dla nazwy kategorii
         public required string UserName { get; set; } // Imię i nazwisko użytkownika
+        public string Name { get; set; }
     
 
     }
