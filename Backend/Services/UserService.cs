@@ -47,20 +47,32 @@ namespace Backend.Services
             return new JwtSecurityTokenHandler().WriteToken(token); // Zwrócenie tokenu jako string
         }
         // Logowanie użytkownika na podstawie emaila i hasła
-        public async Task<Users> LoginUserAsync(LoginDto loginDto)
+        public async Task<Users?> LoginUserAsync(LoginDto loginDto)
         {
-            // Znalezienie użytkownika na podstawie emaila
-            var user = await _context.Users
-                .Include(u => u.LoginData)
-                .FirstOrDefaultAsync(u => u.LoginData.Email == loginDto.Email);
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.LoginData)
+                    .FirstOrDefaultAsync(u => u.LoginData.Email == loginDto.Email);
 
-            if (user == null) throw new Exception("User doesn't exist"); // Użytkownik nie istnieje
+                if (user == null)
+                {
+                    return null; // Zwróć null zamiast rzucania wyjątku
+                }
 
-            // Weryfikacja hasła (BCrypt)
-            if(!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.LoginData.Password))
-                throw new Exception("Invalid credentials"); // Błędne hasło
-            // Zwrócenie użytkownika, jeśli wszystko jest poprawne
-            return user;
+                if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.LoginData.Password))
+                {
+                    return null; // Zwróć null w przypadku błędnych danych
+                }
+
+                return user; // Zwróć użytkownika, jeśli wszystko się zgadza
+            }
+            catch (Exception ex)
+            {
+                // Loguj szczegóły błędu
+                Console.WriteLine($"Błąd logowania: {ex.Message}");
+                throw; // Przekaż dalej w razie poważnych błędów
+            }
         }
         // Rejestracja nowego użytkownika
         public async Task<bool> RegisterUserAsync(RegisterDto registerDto)
