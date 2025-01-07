@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
-import axios from "axios";
 
 // Zakładam, że Twój backend jest na http://localhost:5050
 axios.defaults.baseURL = "http://localhost:5050";
