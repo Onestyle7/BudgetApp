@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,16 +10,27 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import axios from "axios";
 
-// Definicja typu Transaction
+// Zakładam, że Twój backend jest na http://localhost:5050
+axios.defaults.baseURL = "http://localhost:5050";
+
+// Definicja typu Transaction (opcjonalnie, jeśli używasz TypeScript)
 type Transaction = {
   id: number;
   name: string;
   amount: number;
-  category: { id: number; name: string; color: string };
+  date: string;
+  // category po zmapowaniu to będzie obiekt z frontu
+  category: {
+    id: number;
+    name: string;
+    color: string;
+  };
+  userName?: string;
 };
 
-// Kategorie transakcji
+// Kategorie
 const categories = [
   { id: 1, name: "Subscriptions", color: "#FF6384" },
   { id: 2, name: "Groceries", color: "#36A2EB" },
@@ -33,62 +44,149 @@ const categories = [
 
 const Dashboard = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [name, setName] = useState<string>("");
-  const [amount, setAmount] = useState<string>("");
-  const [category, setCategory] = useState<string>("1");
+  const [loading, setLoading] = useState(false);
 
-  // Dodawanie transakcji
-  const addTransaction = () => {
-    // Walidacja danych wejściowych
+  // Formularz
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("1");
+
+  // -------------------
+  // 1. Pobieranie transakcji
+  // -------------------
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+
+      const response = await axios.get("/api/Transaction/all", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // API zwraca np.
+      // [
+      //   {
+      //     "id": 17,
+      //     "amount": 29,
+      //     "date": "2025-01-05T17:25:54.227",
+      //     "category": "Subscriptions",
+      //     "userName": "TestName testSurname",
+      //     "name": "Netflix"
+      //   },
+      //   ...
+      // ]
+
+      const mapped = response.data.map((t: any) => {
+        // Szukamy kategorii po polu `name`:
+        const foundCat = categories.find((c) => c.name === t.category);
+
+        return {
+          ...t,
+          // Nadpisujemy field `category` obiektem z frontu
+          category: foundCat || {
+            id: 0,
+            name: "Nieznana",
+            color: "#000000",
+          },
+        };
+      });
+
+      setTransactions(mapped);
+    } catch (error) {
+      console.error("Błąd podczas ładowania danych:", error);
+      alert("Nie udało się pobrać danych z serwera!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // -------------------
+  // 2. Dodawanie transakcji
+  // -------------------
+  const addTransaction = async () => {
     if (!name.trim()) {
       alert("Nazwa transakcji nie może być pusta!");
       return;
     }
-
     if (!amount || parseFloat(amount) <= 0) {
       alert("Kwota musi być większa od 0!");
       return;
     }
 
-    const categoryObj = categories.find((c) => c.id === parseInt(category));
-    if (!categoryObj) {
-      alert("Nieprawidłowa kategoria");
+    const catObj = categories.find((c) => c.id === parseInt(category));
+    if (!catObj) {
+      alert("Nieprawidłowa kategoria!");
       return;
     }
 
-    const newTransaction: Transaction = {
-      id: transactions.length + 1,
-      name,
-      amount: parseFloat(amount),
-      category: categoryObj,
-    };
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Brak tokena. Zaloguj się ponownie.");
+      return;
+    }
 
-    setTransactions([...transactions, newTransaction]);
-    setName("");
-    setAmount("");
-    setCategory("1");
+    try {
+      // Wysyłamy do backendu w formacie, który on obsługuje
+      // (Skoro zwraca "category": "Subscriptions", to zapewne
+      //  oczekuje też stringa np. "Subscriptions" ?)
+      // Jeżeli jednak oczekuje integera (enuma), to musisz zmienić
+      //  tu na catObj.id. Zależnie od tego, jak jest w kodzie .NET.
+      const newTransaction = {
+        name,
+        amount: parseFloat(amount),
+        date: new Date().toISOString(),
+        // Jeśli Twój .NET przyjmuje "Subscriptions", "Rent" itp.:
+        category: catObj.name,
+      };
+
+      await axios.post("/api/Transaction/add", newTransaction, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Odświeżamy listę
+      fetchTransactions();
+
+      // Reset
+      setName("");
+      setAmount("");
+      setCategory("1");
+    } catch (error) {
+      console.error("Błąd podczas dodawania transakcji:", error);
+      alert("Nie udało się dodać transakcji!");
+    }
   };
 
-  // Memoized computation of chart data
+  // -------------------
+  // 3. useEffect
+  // -------------------
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  // -------------------
+  // 4. Wykres
+  // -------------------
   const data = useMemo(() => {
     return categories.map((cat) => {
       const total = transactions
-        .filter((t) => t.category.id === cat.id)
+        .filter((t) => t.category?.name === cat.name)
         .reduce((sum, t) => sum + t.amount, 0);
       return { name: cat.name, value: total, color: cat.color };
     });
   }, [transactions]);
 
+  // -------------------
+  // 5. Render
+  // -------------------
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
-      {/* Formularz dodawania transakcji */}
       <Card className="p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Dodaj transakcję</h2>
         <div className="flex gap-4 mb-4">
           <Input
-            placeholder="Nazwa"
+            placeholder="Nazwa transakcji"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -98,10 +196,7 @@ const Dashboard = () => {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-          <Select
-            value={category}
-            onValueChange={(value) => setCategory(value)}
-          >
+          <Select value={category} onValueChange={(val) => setCategory(val)}>
             <SelectTrigger>
               <SelectValue placeholder="Wybierz kategorię" />
             </SelectTrigger>
@@ -117,7 +212,6 @@ const Dashboard = () => {
         </div>
       </Card>
 
-      {/* Wykres wydatków */}
       <Card className="p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Wykres wydatków</h2>
         <PieChart width={500} height={400}>
@@ -139,29 +233,30 @@ const Dashboard = () => {
         </PieChart>
       </Card>
 
-      {/* Historia transakcji */}
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-4">Historia transakcji</h2>
-        <table className="table-auto w-full">
-          <thead>
-            <tr>
-              <th className="border px-4 py-2">Nazwa</th>
-              <th className="border px-4 py-2">Kwota</th>
-              <th className="border px-4 py-2">Kategoria</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((transaction) => (
-              <tr key={transaction.id}>
-                <td className="border px-4 py-2">{transaction.name}</td>
-                <td className="border px-4 py-2">{transaction.amount} zł</td>
-                <td className="border px-4 py-2">
-                  {transaction.category?.name ?? "Brak"}
-                </td>
+        {loading ? (
+          <p>Ładowanie danych...</p>
+        ) : (
+          <table className="table-auto w-full">
+            <thead>
+              <tr>
+                <th className="border px-4 py-2">Nazwa</th>
+                <th className="border px-4 py-2">Kwota</th>
+                <th className="border px-4 py-2">Kategoria</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {transactions.map((tx) => (
+                <tr key={tx.id}>
+                  <td className="border px-4 py-2">{tx.name}</td>
+                  <td className="border px-4 py-2">{tx.amount} zł</td>
+                  <td className="border px-4 py-2">{tx.category.name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </Card>
     </div>
   );

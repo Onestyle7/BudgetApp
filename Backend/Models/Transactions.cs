@@ -15,10 +15,13 @@ namespace Backend.Models
         [Range(0.01, Double.MaxValue)]
         public decimal Amount { get; set; }
         [Required]
+        public string name { get; set; }
+        [Required]
         public DateTime Date { get; set; }
         [Required]
         public Category Category { get; set; }
         public int UserId { get; set; }
         public Users User { get; set; }
+
     }
 }
