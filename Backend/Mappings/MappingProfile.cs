@@ -23,8 +23,7 @@ public class MappingProfile : Profile
         .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category.ToString())); // Konwertuje pole Category z enum na string podczas mapowania
 
         CreateMap<Transactions, TransactionDto>() // Mapowanie Transactions na TransactionDto
-        .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category.ToString())) // Konwertuje pole Category z enum na string podczas mapowania
-        .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => $"{src.User.FirstName} {src.User.LastName}")); //Łączy imię i nazwisko użytkownika w jedno pole UserName
+        .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category.ToString())); // Konwertuje pole Category z enum na string podczas mapowania
 
     }
 
