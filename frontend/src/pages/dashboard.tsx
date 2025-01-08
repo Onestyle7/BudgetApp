@@ -136,7 +136,7 @@ const Dashboard = () => {
         amount: parseFloat(amount),
         date: new Date().toISOString(),
         // Jeśli Twój .NET przyjmuje "Subscriptions", "Rent" itp.:
-        category: catObj.name,
+        category: parseInt(category),
       };
 
       await axios.post("/api/Transaction/add", newTransaction, {
