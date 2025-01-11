@@ -136,7 +136,7 @@ const Dashboard = () => {
         amount: parseFloat(amount),
         date: new Date().toISOString(),
         // Jeśli Twój .NET przyjmuje "Subscriptions", "Rent" itp.:
-        category: catObj.name,
+        category: parseInt(category),
       };
 
       await axios.post("/api/Transaction/add", newTransaction, {
@@ -155,8 +155,17 @@ const Dashboard = () => {
       alert("Nie udało się dodać transakcji!");
     }
   };
-
-  // -------------------
+  const deleteTransaction = async (id: number) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`/api/Transaction/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchTransactions();
+    } catch (error) {
+      console.error("Błąd podczas usuwania transakcji:", error);
+      alert("Nie udało się usunąć transakcji!");
+    }
   // 3. useEffect
   // -------------------
   useEffect(() => {
@@ -244,6 +253,7 @@ const Dashboard = () => {
                 <th className="border px-4 py-2">Nazwa</th>
                 <th className="border px-4 py-2">Kwota</th>
                 <th className="border px-4 py-2">Kategoria</th>
+                <th className="border px-4 py-2">Akcje</th>
               </tr>
             </thead>
             <tbody>
@@ -252,6 +262,14 @@ const Dashboard = () => {
                   <td className="border px-4 py-2">{tx.name}</td>
                   <td className="border px-4 py-2">{tx.amount} zł</td>
                   <td className="border px-4 py-2">{tx.category.name}</td>
+                  <td className="border px-4 py-2">
+                    <Button
+                      variant="destructive"
+                      onClick={() => deleteTransaction(tx.id)}
+                    >
+                      Usuń
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -18,28 +18,53 @@ namespace Backend.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var user = await _userService.LoginUserAsync(loginDto);
-
-            if (user == null)
+            if (!ModelState.IsValid)
             {
-                return Unauthorized("Invalid credentials");
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                            .Select(e => e.ErrorMessage)
+                                            .ToList();
+                return BadRequest(new { message = "Błędne dane wejściowe.", errors });
             }
 
-            var token = _userService.GenerateJwtToken(user);
-            return Ok(new { Token = token });
+            try
+            {
+                var user = await _userService.LoginUserAsync(loginDto);
+
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "Nieprawidłowe dane logowania." });
+                }
+
+                var token = _userService.GenerateJwtToken(user);
+                return Ok(new { Token = token });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Wewnętrzny błąd serwera", error = ex.Message });
+            }
         }
+
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
-            var result = await _userService.RegisterUserAsync(registerDto);
-
-            if (!result)
+            try
             {
-                return BadRequest(new {message = "Email already in use"});
-            }
+                var result = await _userService.RegisterUserAsync(registerDto);
 
-            return Ok(new{message = "User registered successfully"});
+                if (!result)
+                {
+                    return BadRequest(new {message = "Email already in use"});
+                }
+
+                return Ok(new{message = "User registered successfully"});
+            }
+            
+            catch(Exception ex)
+            {
+                return StatusCode(500, new {message = "Wewnętrzny błąd serwera", error = ex.Message});
+            }
+           
         }
         
     }

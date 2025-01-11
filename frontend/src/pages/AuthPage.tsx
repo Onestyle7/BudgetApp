@@ -1,29 +1,66 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { login, register } from "@/app/services/authService";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
+// Inicjalizacja ToastContainer
+import { ToastContainer } from "react-toastify";
 
 const AuthPage = () => {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isRegister, setIsRegister] = useState(false);
-  const [error, setError] = useState("");
+
+  useEffect(() => {
+    toast.dismiss(); // Wyczyść wcześniejsze komunikaty
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // Walidacja emaila
+    if (!email || !email.includes("@")) {
+      toast.error("Wprowadź poprawny adres email.");
+      return;
+    }
+
+    // Walidacja hasła
+    if (!password || password.length < 6) {
+      toast.error("Hasło musi mieć co najmniej 6 znaków.");
+      return;
+    }
     try {
       if (isRegister) {
         await register(email, password);
+        toast.success("Rejestracja zakończona sukcesem! Zaloguj się.");
         router.push("/login");
       } else {
         const data = await login(email, password);
         localStorage.setItem("token", data.token);
+        toast.success("Logowanie udane!");
         router.push("/dashboard");
       }
     } catch (error) {
-      setError("Nieprawidłowe dane lub błąd serwera.");
+      console.error("Szczegóły błędu logowania:", error);
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data.message || "Wystąpił błąd.";
+
+        if (status === 401) {
+          toast.error("Nieprawidłowe dane logowania. Spróbuj ponownie.");
+        } else if (status === 400) {
+          toast.error(message);
+        } else if (status === 500) {
+          toast.error("Błąd serwera. Skontaktuj się z administratorem.");
+        } else {
+          toast.error(`Błąd: ${message}`);
+        }
+      } else {
+        toast.error("Nie udało się połączyć z serwerem. Spróbuj później.");
+      }
     }
   };
 
@@ -36,7 +73,6 @@ const AuthPage = () => {
         <h2 className="text-2xl font-semibold text-center mb-4">
           {isRegister ? "Rejestracja" : "Logowanie"}
         </h2>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
             type="email"
@@ -67,6 +103,7 @@ const AuthPage = () => {
           </button>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

@@ -8,10 +8,11 @@ namespace Backend.DTOs
 {
     public class LoginDto
     {
-        [Required]
-        [EmailAddress]
+        [Required(ErrorMessage = "Email jest wymagany.")]
+        [EmailAddress(ErrorMessage = "Nieprawidłowy format email.")]
         public string Email { get; set; }
-        [Required]
+        [Required(ErrorMessage = "Hasło jest wymagane.")]
+        [MinLength(6, ErrorMessage = "Hasło musi mieć co najmniej 6 znaków.")]
         public string Password { get; set; }
     }
 }
